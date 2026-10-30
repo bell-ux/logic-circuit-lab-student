@@ -5,10 +5,11 @@ const LOG_KEY = 'logicLabRecords';
 const problems = [
   {id:'P1', title:'AND回路', level:'01 · 基本', prompt:'AとBの両方が1のときだけ、出力が1になる回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'AND'}, hints:['ANDは、2つの入力が両方1のときに1を出します。','片方でも0なら、出力はどうなるでしょう？','AとBをそのままANDゲートにつなぎます。']},
   {id:'P2', title:'条件に合う回路', level:'02 · 標準', prompt:'A=0、B=1のとき、出力Yを1にしよう。条件を満たす回路は複数あります。', requiredTest:{input:{A:0,B:1},output:1}, inputs:['A','B'], slots:['g1','g2'], positions:{g1:{x:230,y:62},g2:{x:530,y:122}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['g2','Y']], target:{g1:'NOT',g2:'OR'}, hints:['NOTゲートは入力の0と1を反対にします。','AをNOTにした結果とBをORに入れると、条件を満たします。','NOT＋ORは答えの一例です。別のゲートの組み合わせも試せます。']},
-  {id:'P3', title:'4つのゲートをつなぐ', level:'03 · 応用', prompt:'(NOT A AND B) OR (NOT C) を作ろう。', inputs:['A','B','C'], slots:['g1','g2','g3','g4'], positions:{g1:{x:215,y:42},g2:{x:425,y:88},g3:{x:215,y:190},g4:{x:640,y:125}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['C','g3'],['g2','g4'],['g3','g4'],['g4','Y']], target:{g1:'NOT',g2:'AND',g3:'NOT',g4:'OR'}, hints:['AとCをそれぞれNOTゲートで反転します。','NOT AとBをANDに入れ、その出力とNOT CをORに入れます。','枠の順にNOT、AND、NOT、ORを選びます。']},
+  {id:'P3', title:'NANDだけで条件回路を作る', level:'03 · 発展', prompt:'AとBが両方1、またはCとDが両方1で、さらにEも1のときだけ、Yを0にしよう。ほかの組み合わせではY=1です。4つのゲートをすべてNANDにします。', inputs:['A','B','C','D','E'], slots:['g1','g2','g3','g4'], positions:{g1:{x:220,y:52},g2:{x:220,y:200},g3:{x:430,y:125},g4:{x:640,y:125}}, wires:[['A','g1'],['B','g1'],['C','g2'],['D','g2'],['g1','g3'],['g2','g3'],['g3','g4'],['E','g4'],['g4','Y']], target:{g1:'NAND',g2:'NAND',g3:'NAND',g4:'NAND'}, hints:['AとB、CとDの2組に分けます。最後にEの値も使います。','最初の2つのNAND出力を次のNANDに入れると、2組のAND条件の「どちらか」を表せます。','最後はその値とEをNANDに入れます。出力が0になるのは、条件が成立しE=1のときです。']},
   {id:'P4', title:'NAND回路', level:'04 · 発展', prompt:'ANDの結果を反転するNAND回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'NAND'}, hints:['NANDはANDの出力を反転します。','ANDが1になる入力はどの組み合わせでしょう？','AとBをNANDゲートにつなぎます。']}
 ];
-const gateTypes = ['AND','OR','NOT','NAND'];
+let publishedAnswers = {};
+let answersLoaded = false;
 let problemIndex = 0;
 let inputValues = {A:0, B:0, C:0};
 let hintCounts = {};
@@ -24,6 +25,41 @@ function saveStudentId(value) {
   catch (error) { /* 保存できなくても、このタブでの学習は続けられます。 */ }
 }
 studentId.value = getSavedStudentId();
+
+function requestJsonp(parameters, prefix) {
+  return new Promise((resolve, reject) => {
+    const callback = prefix + Date.now();
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(new Error('timeout')), 10000);
+    function finish(error, data) {
+      clearTimeout(timer); delete window[callback]; script.remove();
+      if (error) reject(error); else resolve(data);
+    }
+    window[callback] = data => data && data.ok === true ? finish(null, data) : finish(new Error('denied'));
+    script.onerror = () => finish(new Error('network'));
+    script.src = SCRIPT_URL + '?' + new URLSearchParams({...parameters, callback}).toString();
+    document.body.appendChild(script);
+  });
+}
+async function refreshPublishedAnswers() {
+  $('answerReleaseStatus').textContent = '公開状況を確認しています…';
+  try {
+    const data = await requestJsonp({mode:'publishedAnswers'}, 'logicStudentAnswers');
+    publishedAnswers = Object.fromEntries((data.answers || []).map(item => [item.problem, item.text]));
+    answersLoaded = true; renderPublishedAnswer();
+  } catch (error) {
+    answersLoaded = false; publishedAnswers = {};
+    renderPublishedAnswer('公開状況を取得できません。ページを再読み込みして、もう一度確認してください。');
+  }
+}
+function renderPublishedAnswer(message) {
+  const answer = publishedAnswers[problems[problemIndex].id];
+  $('answerReleaseStatus').textContent = message || (answersLoaded ? answer ? '先生がこの問題の答えを公開しています。' : 'この問題の答えはまだ公開されていません。' : '公開状態を確認してください。');
+  $('showPublishedAnswer').hidden = !answer;
+  $('publishedAnswerText').hidden = true;
+  $('publishedAnswerText').textContent = answer || '';
+  $('showPublishedAnswer').textContent = '答えを見る';
+}
 
 function logEvent(type, extra = {}) {
   const row = {time:new Date().toISOString(), studentId:studentId.value.trim(), problem:problems[problemIndex].id,
@@ -55,6 +91,7 @@ function showView(view) {
   $('practiceView').hidden = view !== 'practice';
   document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
 }
+$('showPublishedAnswer').addEventListener('click', () => { $('publishedAnswerText').hidden = false; });
 
 function evaluateGate(type, values) {
   if (type === 'NOT') return 1 - values[0];
@@ -62,6 +99,9 @@ function evaluateGate(type, values) {
   if (type === 'OR') return values.some(value => value === 1) ? 1 : 0;
   if (type === 'NAND') return values.every(value => value === 1) ? 0 : 1;
   return 0;
+}
+function gatesForSlot(problem, slot) {
+  return slotInputs(problem, slot).length === 1 ? ['NOT'] : ['AND','OR','NAND'];
 }
 function currentGates() {
   const problem = problems[problemIndex];
@@ -80,11 +120,11 @@ function evaluateCircuit(problem, gates, inputs) {
   return {output:result.Y, steps};
 }
 function slotInputs(problem, slot) {
-  const map = {P1:{g1:['A','B']},P2:{g1:['A'],g2:['N1','B']},P3:{g1:['A'],g2:['N1','B'],g3:['C'],g4:['D','N2']},P4:{g1:['A','B']}};
+  const map = {P1:{g1:['A','B']},P2:{g1:['A'],g2:['N1','B']},P3:{g1:['A','B'],g2:['C','D'],g3:['N1','N2'],g4:['S','E']},P4:{g1:['A','B']}};
   return map[problem.id][slot];
 }
 function slotOutput(problem, slot) {
-  const map = {P1:{g1:'Y'},P2:{g1:'N1',g2:'Y'},P3:{g1:'N1',g2:'D',g3:'N2',g4:'Y'},P4:{g1:'Y'}};
+  const map = {P1:{g1:'Y'},P2:{g1:'N1',g2:'Y'},P3:{g1:'N1',g2:'N2',g3:'S',g4:'Y'},P4:{g1:'Y'}};
   return map[problem.id][slot];
 }
 
@@ -95,14 +135,18 @@ function renderProblemList() {
 function renderCircuit() {
   const problem = problems[problemIndex];
   const gates = currentGates();
-  const svgWidth = 850, svgHeight = 250, gateWidth = 100;
-  const inputPosition = Object.fromEntries(problem.inputs.map((name,index) => [name,{x:84,y:problem.inputs.length===2?(index===0?82:170):[42,122,202][index]}]));
+  const svgWidth = 850, svgHeight = problem.inputs.length > 3 ? 270 : 250, gateWidth = 100;
+  const inputPosition = Object.fromEntries(problem.inputs.map((name,index) => {
+    const defaults = problem.inputs.length===2 ? [82,170] : [42,122,202];
+    const y = problem.inputs.length <= 3 ? defaults[index] : 26 + index * (svgHeight - 52) / (problem.inputs.length - 1);
+    return [name,{x:84,y}];
+  }));
   const sourcePoint = name => name === 'Y' ? {x:795,y:125} : problem.positions[name] ? {x:problem.positions[name].x+gateWidth,y:problem.positions[name].y} : inputPosition[name];
   const targetPoint = (slot,index,total) => {const pos=problem.positions[slot];return {x:pos.x,y:pos.y+(total===1?0:(index-(total-1)/2)*22)};};
   let wires = '';
   problem.wires.forEach(([from,to]) => {
     let start, end;
-    if (from === 'A' || from === 'B' || from === 'C') start = inputPosition[from]; else start = sourcePoint(from);
+    if (problem.inputs.includes(from)) start = inputPosition[from]; else start = sourcePoint(from);
     if (to === 'Y') end = {x:775,y:125};
     else {const names=slotInputs(problem,to);const portIndex=names.indexOf(from);end=targetPoint(to,Math.max(portIndex,0),names.length);}
     const middle=(start.x+end.x)/2;
@@ -121,7 +165,8 @@ function renderCircuit() {
   document.querySelectorAll('.gate-slot').forEach(gateElement => {
     const change = () => {
       const oldGate=gateElement.dataset.gate;
-      gateElement.dataset.gate=gateTypes[(gateTypes.indexOf(oldGate)+1)%gateTypes.length];
+      const choices=gatesForSlot(problem, gateElement.dataset.slot);
+      gateElement.dataset.gate=choices[(choices.indexOf(oldGate)+1)%choices.length];
       gateElement.querySelector('.gate-text').textContent=gateElement.dataset.gate;
       renderTruthTable();
     };
@@ -147,15 +192,17 @@ function renderTruthTable() {
   const correct=problem.requiredTest?evaluateCircuit(problem,currentGates(),problem.requiredTest.input).output===problem.requiredTest.output:rows.every(row=>row.actual===row.target);
   $('truthVerdict').textContent=correct?(problem.requiredTest?'指定条件クリア':'全パターン正解'):(problem.requiredTest?'指定条件を見直そう':'目標と違う組み合わせがあります');
   $('truthVerdict').classList.toggle('pill-good',correct);
+  renderPublishedAnswer();
   return correct;
 }
 function renderPractice() {
   const problem=problems[problemIndex];
+  problem.inputs.forEach(name => { if (!(name in inputValues)) inputValues[name]=0; });
   if(problem.requiredTest) inputValues={...inputValues,...problem.requiredTest.input};
   $('problemLevel').textContent=problem.level;$('problemTitle').textContent=problem.title;$('problemPrompt').textContent=problem.prompt;$('problemCount').textContent=`問題 ${problemIndex+1} / ${problems.length}`;
   $('inputControls').innerHTML=problem.inputs.map(name=>`<label class="bit-control"><span>${name}</span><select data-input="${name}" ${problem.requiredTest?'disabled':''}><option value="0" ${inputValues[name]===0?'selected':''}>0</option><option value="1" ${inputValues[name]===1?'selected':''}>1</option></select></label>`).join('');
   document.querySelectorAll('[data-input]').forEach(select=>select.addEventListener('change',()=>{inputValues[select.dataset.input]=Number(select.value);renderCircuit();}));
-  renderProblemList();renderCircuit();renderTruthTable();
+  renderProblemList();renderCircuit();renderTruthTable();renderPublishedAnswer();renderPublishedAnswer();
   $('actualOutput').textContent='—';$('targetOutput').textContent='—';$('runVerdict').textContent='未判定';$('runVerdict').className='verdict';
   $('animationMessage').textContent='入力を選び、「回路を実行」を押してください。';$('hintText').textContent='段階が進むほど、答えに近づくヒントです。';$('hintStatus').textContent='必要なときに開いてください';
 }
@@ -197,8 +244,14 @@ async function runCircuit() {
   $('runButton').disabled=false;
 }
 $('runButton').addEventListener('click',runCircuit);
+$('checkPublishedAnswers').addEventListener('click',refreshPublishedAnswers);
+$('showPublishedAnswer').addEventListener('click',()=>{
+  const text=$('publishedAnswerText'); text.hidden=!text.hidden;
+  $('showPublishedAnswer').textContent=text.hidden?'答えを見る':'答えを隠す';
+});
 document.querySelectorAll('[data-hint]').forEach(button=>button.addEventListener('click',()=>{const level=Number(button.dataset.hint),problem=problems[problemIndex];hintCounts[level]=(hintCounts[level]||0)+1;$('hintText').textContent=`ヒント ${level+1}：${problem.hints[level]}`;$('hintStatus').textContent=`${level+1}段階目を表示中`;logEvent('hint',{hintLevel:level+1});}));
 $('consultButton').addEventListener('click',()=>{const message=$('consultText').value.trim();if(!message){$('consultText').focus();return;}logEvent('consult',{message});$('consultText').value='';$('animationMessage').textContent='相談を送りました。先生に確認してもらいましょう。';});
 
 renderPractice();
+refreshPublishedAnswers();
 
