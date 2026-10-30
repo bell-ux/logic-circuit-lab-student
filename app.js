@@ -4,7 +4,7 @@ const LOG_KEY = 'logicLabRecords';
 
 const problems = [
   {id:'P1', title:'AND回路', level:'01 · 基本', prompt:'AとBの両方が1のときだけ、出力が1になる回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'AND'}, hints:['ANDは、2つの入力が両方1のときに1を出します。','片方でも0なら、出力はどうなるでしょう？','AとBをそのままANDゲートにつなぎます。']},
-  {id:'P2', title:'NOT＋OR回路', level:'02 · 標準', prompt:'Aを反転してからBとORをとろう。目標は (NOT A) OR B です。', inputs:['A','B'], slots:['g1','g2'], positions:{g1:{x:230,y:62},g2:{x:530,y:122}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['g2','Y']], target:{g1:'NOT',g2:'OR'}, hints:['NOTゲートは入力の0と1を反対にします。','AをNOTに通した結果とBをORに入れます。','左の枠をNOT、右の枠をORにします。']},
+  {id:'P2', title:'NOT＋OR回路', level:'02 · 標準', prompt:'A=0、B=1のとき、出力Yを1にしよう。', inputs:['A','B'], slots:['g1','g2'], positions:{g1:{x:230,y:62},g2:{x:530,y:122}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['g2','Y']], target:{g1:'NOT',g2:'OR'}, hints:['NOTゲートは入力の0と1を反対にします。','AをNOTに通した結果とBをORに入れます。','左の枠をNOT、右の枠をORにします。']},
   {id:'P3', title:'4つのゲートをつなぐ', level:'03 · 応用', prompt:'(NOT A AND B) OR (NOT C) を作ろう。', inputs:['A','B','C'], slots:['g1','g2','g3','g4'], positions:{g1:{x:215,y:42},g2:{x:425,y:88},g3:{x:215,y:190},g4:{x:640,y:125}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['C','g3'],['g2','g4'],['g3','g4'],['g4','Y']], target:{g1:'NOT',g2:'AND',g3:'NOT',g4:'OR'}, hints:['AとCをそれぞれNOTゲートで反転します。','NOT AとBをANDに入れ、その出力とNOT CをORに入れます。','枠の順にNOT、AND、NOT、ORを選びます。']},
   {id:'P4', title:'NAND回路', level:'04 · 発展', prompt:'ANDの結果を反転するNAND回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'NAND'}, hints:['NANDはANDの出力を反転します。','ANDが1になる入力はどの組み合わせでしょう？','AとBをNANDゲートにつなぎます。']}
 ];
