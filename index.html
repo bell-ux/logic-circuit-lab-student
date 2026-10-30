@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>論理回路ラボ | 学習ページ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="student-body">
+  <header class="topbar"><span class="brand">◉ 論理回路ラボ</span><span class="student-label">学習ページ</span></header>
+  <main class="page">
+    <section id="entryScreen" class="entry-screen">
+      <div class="entry-illustration"><span>0</span><i>→</i><span>1</span></div>
+      <p class="eyebrow">LOGIC CIRCUIT LAB</p>
+      <h1>出席番号を入力してください</h1>
+      <p class="entry-copy">番号を確認してから、講義と演習を始めます。</p>
+      <form id="entryForm" class="entry-form">
+        <label for="studentId">出席番号</label>
+        <input id="studentId" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="例：12" required>
+        <button class="button primary" type="submit">講義・演習へ進む</button>
+        <p id="entryError" class="entry-error" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <div id="lessonScreen" hidden>
+      <section class="student-welcome"><div><p class="eyebrow">LOGIC CIRCUIT LAB</p><h1>論理回路を学ぼう</h1><p>講義を読んでから、演習で回路の動きを確かめます。</p></div><div class="number-badge">出席番号 <strong id="currentStudentId"></strong><button id="changeNumber" class="text-button">変更</button></div></section>
+      <nav class="student-tabs" aria-label="学習ページ"><button class="tab active" data-view="lecture">ミニ講義</button><button class="tab" data-view="practice">演習</button></nav>
+
+      <section id="lectureView" class="lecture-view">
+        <article class="card lecture-intro"><p class="eyebrow">LESSON 01</p><h2>論理回路は、0と1を計算するしくみ</h2><p>回路に入る信号は0か1です。ゲートは、入力された信号を決まったルールで計算し、結果を次の場所へ送ります。</p><div class="signal-example"><span class="signal-chip">入力 A：1</span><span class="signal-arrow">→</span><span class="signal-chip gate-chip">ゲート</span><span class="signal-arrow">→</span><span class="signal-chip output-chip">出力 Y：?</span></div></article>
+        <h2 class="section-title">4つのゲート</h2>
+        <div class="gate-lessons">
+          <article class="card gate-lesson"><div class="gate-icon">AND</div><div><h3>AND（両方）</h3><p>入力が<strong>どちらも1</strong>のときだけ、出力が1。</p><span class="formula">1 AND 1 → 1　／　それ以外 → 0</span></div></article>
+          <article class="card gate-lesson"><div class="gate-icon">OR</div><div><h3>OR（どちらか）</h3><p>入力の<strong>どちらかが1</strong>なら、出力が1。</p><span class="formula">0 OR 0 → 0　／　それ以外 → 1</span></div></article>
+          <article class="card gate-lesson"><div class="gate-icon">NOT</div><div><h3>NOT（反対）</h3><p>入力を反対の値にします。</p><span class="formula">0 → 1　／　1 → 0</span></div></article>
+          <article class="card gate-lesson"><div class="gate-icon">NAND</div><div><h3>NAND（ANDの反対）</h3><p>ANDの計算結果を反対にします。</p><span class="formula">1 NAND 1 → 0　／　それ以外 → 1</span></div></article>
+        </div>
+        <div class="lecture-next"><p>準備ができたら、演習で回路を動かしてみましょう。</p><button class="button primary" data-go-practice>演習へ進む →</button></div>
+      </section>
+
+      <section id="practiceView" class="practice-view" hidden>
+        <div class="lesson-layout">
+          <aside class="card problem-list"><h2>今日の問題</h2><div id="problemList"></div></aside>
+          <article class="card lesson"><div class="lesson-head"><div><p class="eyebrow" id="problemLevel"></p><h2 id="problemTitle"></h2></div><span id="problemCount" class="pill"></span></div><p id="problemPrompt" class="prompt"></p>
+            <div class="circuit-title"><strong>信号の道すじ</strong><span>ゲートを押すと種類を変更できます</span></div><div id="circuit" class="circuit" aria-label="回路図"></div>
+            <div class="controls"><div id="inputControls" class="input-controls"></div><button id="runButton" class="button primary">▶ 回路を実行</button></div>
+            <div id="animationMessage" class="message" aria-live="polite">入力を選び、「回路を実行」を押してください。</div>
+            <div class="result-row"><div><span class="small-label">この入力での出力</span><strong id="actualOutput">—</strong></div><div><span class="small-label">目標回路の出力</span><strong id="targetOutput">—</strong></div><div id="runVerdict" class="verdict">未判定</div></div>
+            <div class="truth-head"><strong>真理値表（すべての入力の組み合わせ）</strong><span id="truthVerdict" class="pill">未判定</span></div><div class="table-wrap"><table><thead><tr id="truthHead"></tr></thead><tbody id="truthBody"></tbody></table></div>
+            <div class="hints"><div><strong>ヒント</strong><span id="hintStatus">必要なときに開いてください</span></div><div class="hint-buttons"><button class="button light" data-hint="0">ヒント 1</button><button class="button light" data-hint="1">ヒント 2</button><button class="button light" data-hint="2">ヒント 3</button></div><p id="hintText" class="hint-text">段階が進むほど、答えに近づくヒントです。</p></div>
+            <div class="consult"><div><strong>先生に相談する</strong><p>質問を送ると、先生用ページに表示されます。</p></div><textarea id="consultText" rows="2" placeholder="わからないところを書いてください"></textarea><button id="consultButton" class="button light">相談を送る</button></div>
+          </article>
+        </div>
+      </section>
+      <footer>論理回路ラボ · 学習記録は授業担当者に共有されます</footer>
+    </div>
+  </main><script src="app.js"></script>
+</body>
+</html>
+
