@@ -4,7 +4,7 @@ const LOG_KEY = 'logicLabRecords';
 
 const problems = [
   {id:'P1', title:'AND回路', level:'01 · 基本', prompt:'AとBの両方が1のときだけ、出力が1になる回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'AND'}, hints:['ANDは、2つの入力が両方1のときに1を出します。','片方でも0なら、出力はどうなるでしょう？','AとBをそのままANDゲートにつなぎます。']},
-  {id:'P2', title:'NOT＋OR回路', level:'02 · 標準', prompt:'A=0、B=1のとき、出力Yを1にしよう。', inputs:['A','B'], slots:['g1','g2'], positions:{g1:{x:230,y:62},g2:{x:530,y:122}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['g2','Y']], target:{g1:'NOT',g2:'OR'}, hints:['NOTゲートは入力の0と1を反対にします。','AをNOTに通した結果とBをORに入れます。','左の枠をNOT、右の枠をORにします。']},
+  {id:'P2', title:'条件に合う回路', level:'02 · 標準', prompt:'A=0、B=1のとき、出力Yを1にしよう。条件を満たす回路は複数あります。', requiredTest:{input:{A:0,B:1},output:1}, inputs:['A','B'], slots:['g1','g2'], positions:{g1:{x:230,y:62},g2:{x:530,y:122}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['g2','Y']], target:{g1:'NOT',g2:'OR'}, hints:['NOTゲートは入力の0と1を反対にします。','AをNOTにした結果とBをORに入れると、条件を満たします。','NOT＋ORは答えの一例です。別のゲートの組み合わせも試せます。']},
   {id:'P3', title:'4つのゲートをつなぐ', level:'03 · 応用', prompt:'(NOT A AND B) OR (NOT C) を作ろう。', inputs:['A','B','C'], slots:['g1','g2','g3','g4'], positions:{g1:{x:215,y:42},g2:{x:425,y:88},g3:{x:215,y:190},g4:{x:640,y:125}}, wires:[['A','g1'],['g1','g2'],['B','g2'],['C','g3'],['g2','g4'],['g3','g4'],['g4','Y']], target:{g1:'NOT',g2:'AND',g3:'NOT',g4:'OR'}, hints:['AとCをそれぞれNOTゲートで反転します。','NOT AとBをANDに入れ、その出力とNOT CをORに入れます。','枠の順にNOT、AND、NOT、ORを選びます。']},
   {id:'P4', title:'NAND回路', level:'04 · 発展', prompt:'ANDの結果を反転するNAND回路を作ろう。', inputs:['A','B'], slots:['g1'], positions:{g1:{x:360,y:120}}, wires:[['A','g1'],['B','g1'],['g1','Y']], target:{g1:'NAND'}, hints:['NANDはANDの出力を反転します。','ANDが1になる入力はどの組み合わせでしょう？','AとBをNANDゲートにつなぎます。']}
 ];
@@ -122,23 +122,26 @@ function allRows() {
   const problem=problems[problemIndex],rows=[];
   for(let bits=0;bits<2**problem.inputs.length;bits++){
     const input=Object.fromEntries(problem.inputs.map((name,index)=>[name,(bits>>(problem.inputs.length-index-1))&1]));
-    rows.push({input,actual:evaluateCircuit(problem,currentGates(),input).output,target:evaluateCircuit(problem,problem.target,input).output});
+    const actual=evaluateCircuit(problem,currentGates(),input).output;
+    const required=problem.requiredTest && problem.inputs.every(name=>input[name]===problem.requiredTest.input[name]);
+    rows.push({input,actual,target:problem.requiredTest?(required?problem.requiredTest.output:null):evaluateCircuit(problem,problem.target,input).output});
   }
   return rows;
 }
 function renderTruthTable() {
   const problem=problems[problemIndex],rows=allRows();
   $('truthHead').innerHTML=problem.inputs.map(name=>`<th>${name}</th>`).join('')+'<th>目標Y</th><th>自分のY</th><th>判定</th>';
-  $('truthBody').innerHTML=rows.map(row=>`<tr>${problem.inputs.map(name=>`<td>${row.input[name]}</td>`).join('')}<td>${row.target}</td><td>${row.actual}</td><td class="${row.actual===row.target?'match':'mismatch'}">${row.actual===row.target?'○':'×'}</td></tr>`).join('');
-  const correct=rows.every(row=>row.actual===row.target);
-  $('truthVerdict').textContent=correct?'全パターン正解':'目標と違う組み合わせがあります';
+  $('truthBody').innerHTML=rows.map(row=>{const applicable=row.target!==null;return `<tr>${problem.inputs.map(name=>`<td>${row.input[name]}</td>`).join('')}<td>${applicable?row.target:'—'}</td><td>${row.actual}</td><td class="${!applicable?'':row.actual===row.target?'match':'mismatch'}">${!applicable?'対象外':row.actual===row.target?'○':'×'}</td></tr>`;}).join('');
+  const correct=problem.requiredTest?evaluateCircuit(problem,currentGates(),problem.requiredTest.input).output===problem.requiredTest.output:rows.every(row=>row.actual===row.target);
+  $('truthVerdict').textContent=correct?(problem.requiredTest?'指定条件クリア':'全パターン正解'):(problem.requiredTest?'指定条件を見直そう':'目標と違う組み合わせがあります');
   $('truthVerdict').classList.toggle('pill-good',correct);
   return correct;
 }
 function renderPractice() {
   const problem=problems[problemIndex];
+  if(problem.requiredTest) inputValues={...inputValues,...problem.requiredTest.input};
   $('problemLevel').textContent=problem.level;$('problemTitle').textContent=problem.title;$('problemPrompt').textContent=problem.prompt;$('problemCount').textContent=`問題 ${problemIndex+1} / ${problems.length}`;
-  $('inputControls').innerHTML=problem.inputs.map(name=>`<label class="bit-control"><span>${name}</span><select data-input="${name}"><option value="0" ${inputValues[name]===0?'selected':''}>0</option><option value="1" ${inputValues[name]===1?'selected':''}>1</option></select></label>`).join('');
+  $('inputControls').innerHTML=problem.inputs.map(name=>`<label class="bit-control"><span>${name}</span><select data-input="${name}" ${problem.requiredTest?'disabled':''}><option value="0" ${inputValues[name]===0?'selected':''}>0</option><option value="1" ${inputValues[name]===1?'selected':''}>1</option></select></label>`).join('');
   document.querySelectorAll('[data-input]').forEach(select=>select.addEventListener('change',()=>{inputValues[select.dataset.input]=Number(select.value);renderCircuit();}));
   renderProblemList();renderCircuit();renderTruthTable();
   $('actualOutput').textContent='—';$('targetOutput').textContent='—';$('runVerdict').textContent='未判定';$('runVerdict').className='verdict';
@@ -155,7 +158,7 @@ function animatePath(path, bit) {
   });
 }
 async function runCircuit() {
-  const problem=problems[problemIndex],gates=currentGates(),calculated=evaluateCircuit(problem,gates,inputValues),target=evaluateCircuit(problem,problem.target,inputValues);
+  const problem=problems[problemIndex],gates=currentGates(),testInput=problem.requiredTest?problem.requiredTest.input:inputValues,calculated=evaluateCircuit(problem,gates,testInput),targetOutput=problem.requiredTest?problem.requiredTest.output:evaluateCircuit(problem,problem.target,testInput).output;
   $('runButton').disabled=true;
   for(const step of calculated.steps){
     const gate=document.querySelector(`[data-slot="${step.slot}"]`),pos=problem.positions[step.slot];
@@ -174,11 +177,11 @@ async function runCircuit() {
     if(outgoing){const path=document.querySelector(`[data-wire="${outgoing[0]}-${outgoing[1]}"]`);if(path){path.classList.add('wire-active');await animatePath(path,step.output);path.classList.remove('wire-active');}}
     gate.classList.remove('gate-active');
   }
-  $('actualOutput').textContent=calculated.output;$('targetOutput').textContent=target.output;
+  $('actualOutput').textContent=calculated.output;$('targetOutput').textContent=targetOutput;
   const correct=renderTruthTable();
-  $('runVerdict').textContent=correct?'回路全体が正解':'回路を見直そう';$('runVerdict').className='verdict '+(correct?'good':'bad');
-  $('animationMessage').textContent=`この入力の出力は ${calculated.output}。目標の出力は ${target.output} です。`;
-  logEvent('run',{input:{...inputValues},output:calculated.output,target:target.output,correct,gates,hints:Object.values(hintCounts).reduce((sum,count)=>sum+count,0)});
+  $('runVerdict').textContent=correct?(problem.requiredTest?'指定条件クリア':'回路全体が正解'):'回路を見直そう';$('runVerdict').className='verdict '+(correct?'good':'bad');
+  $('animationMessage').textContent=`この入力の出力は ${calculated.output}。目標の出力は ${targetOutput} です。`;
+  logEvent('run',{input:{...testInput},output:calculated.output,target:targetOutput,correct,gates,hints:Object.values(hintCounts).reduce((sum,count)=>sum+count,0)});
   $('runButton').disabled=false;
 }
 $('runButton').addEventListener('click',runCircuit);
