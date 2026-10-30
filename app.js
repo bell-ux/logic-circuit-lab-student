@@ -15,14 +15,26 @@ let hintCounts = {};
 
 const $ = id => document.getElementById(id);
 const studentId = $('studentId');
-studentId.value = localStorage.getItem('logicLabStudentId') || '';
+function getSavedStudentId() {
+  try { return localStorage.getItem('logicLabStudentId') || ''; }
+  catch (error) { return ''; }
+}
+function saveStudentId(value) {
+  try { localStorage.setItem('logicLabStudentId', value); }
+  catch (error) { /* 保存できなくても、このタブでの学習は続けられます。 */ }
+}
+studentId.value = getSavedStudentId();
 
 function logEvent(type, extra = {}) {
   const row = {time:new Date().toISOString(), studentId:studentId.value.trim(), problem:problems[problemIndex].id,
     title:problems[problemIndex].title, type, ...extra};
-  const saved = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
-  saved.unshift(row);
-  localStorage.setItem(LOG_KEY, JSON.stringify(saved.slice(0,300)));
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+    saved.unshift(row);
+    localStorage.setItem(LOG_KEY, JSON.stringify(saved.slice(0,300)));
+  } catch (error) {
+    // 保存領域が使えない場合も、スプレッドシートへの送信は続けます。
+  }
   fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(row)}).catch(() => {});
 }
 
@@ -30,10 +42,10 @@ $('entryForm').addEventListener('submit', event => {
   event.preventDefault();
   const value = studentId.value.trim();
   if (!/^\d{1,12}$/.test(value)) { $('entryError').textContent = '数字の出席番号を入力してください。'; return; }
-  localStorage.setItem('logicLabStudentId', value);
   $('currentStudentId').textContent = value;
   $('entryScreen').hidden = true;
   $('lessonScreen').hidden = false;
+  saveStudentId(value);
 });
 $('changeNumber').onclick = () => { $('lessonScreen').hidden = true; $('entryScreen').hidden = false; studentId.focus(); };
 document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
