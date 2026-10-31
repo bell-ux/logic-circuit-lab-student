@@ -52,12 +52,55 @@ async function refreshPublishedAnswers() {
     renderPublishedAnswer('公開状況を取得できません。ページを再読み込みして、もう一度確認してください。');
   }
 }
+function renderAnswerCircuit(problem) {
+  const gates = problem.id === 'P2' ? {g1:'NOT', g2:'OR'} : problem.target;
+  const svgHeight = problem.inputs.length > 3 ? 270 : 250;
+  const gateWidth = 100;
+  const inputPosition = Object.fromEntries(problem.inputs.map((name,index) => {
+    const defaults = problem.inputs.length === 2 ? [82,170] : [42,122,202];
+    const y = problem.inputs.length <= 3 ? defaults[index] : 26 + index * (svgHeight - 52) / (problem.inputs.length - 1);
+    return [name,{x:84,y}];
+  }));
+  const targetPoint = (slot,index,total) => {
+    const pos = problem.positions[slot];
+    return {x:pos.x,y:pos.y+(total===1?0:(index-(total-1)/2)*22)};
+  };
+  const wires = problem.wires.map(([from,to]) => {
+    const start = problem.inputs.includes(from) ? inputPosition[from] : {x:problem.positions[from].x+gateWidth,y:problem.positions[from].y};
+    const end = to === 'Y' ? {x:775,y:125} : targetPoint(to,Math.max(slotInputs(problem,to).indexOf(from),0),slotInputs(problem,to).length);
+    const middle = (start.x + end.x) / 2;
+    return `<path class="answer-wire" d="M ${start.x} ${start.y} C ${middle} ${start.y}, ${middle} ${end.y}, ${end.x} ${end.y}"/>`;
+  }).join('');
+  const inputs = problem.inputs.map(name => {
+    const {y} = inputPosition[name];
+    return `<text class="answer-io-label" x="22" y="${y+5}">${name}</text><circle class="answer-input-node" cx="64" cy="${y}" r="16"/>`;
+  }).join('');
+  const gateNodes = problem.slots.map(slot => {
+    const pos = problem.positions[slot];
+    return `<g class="answer-gate"><rect x="${pos.x}" y="${pos.y-27}" width="${gateWidth}" height="54" rx="12"/><text x="${pos.x+gateWidth/2}" y="${pos.y+5}">${gates[slot]}</text></g>`;
+  }).join('');
+  return `<svg class="answer-circuit-svg" viewBox="0 0 850 ${svgHeight}" role="img" aria-label="${problem.title}の解答回路"><defs><marker id="answerArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#91a497"/></marker></defs>${wires}${inputs}${gateNodes}<circle class="answer-output-node" cx="810" cy="125" r="18"/><text class="answer-io-label" x="810" y="130">Y</text></svg>`;
+}
 function renderPublishedAnswer(message) {
-  const answer = publishedAnswers[problems[problemIndex].id];
+  const problem = problems[problemIndex];
+  const answer = publishedAnswers[problem.id];
   $('answerReleaseStatus').textContent = message || (answersLoaded ? answer ? '先生がこの問題の答えを公開しています。' : 'この問題の答えはまだ公開されていません。' : '公開状態を確認してください。');
   $('showPublishedAnswer').hidden = !answer;
-  $('publishedAnswerText').hidden = true;
-  $('publishedAnswerText').textContent = answer || '';
+  const answerBox = $('publishedAnswerText');
+  answerBox.hidden = true;
+  answerBox.replaceChildren();
+  if (answer) {
+    const heading = document.createElement('strong');
+    heading.className = 'answer-diagram-heading';
+    heading.textContent = '解答例の回路';
+    const diagram = document.createElement('div');
+    diagram.className = 'answer-diagram';
+    diagram.innerHTML = renderAnswerCircuit(problem);
+    const explanation = document.createElement('p');
+    explanation.className = 'answer-explanation';
+    explanation.textContent = answer;
+    answerBox.append(heading, diagram, explanation);
+  }
   $('showPublishedAnswer').textContent = '答えを見る';
 }
 
