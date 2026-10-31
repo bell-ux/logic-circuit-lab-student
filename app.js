@@ -287,9 +287,12 @@ async function runCircuit() {
 }
 $('runButton').addEventListener('click',runCircuit);
 $('checkPublishedAnswers').addEventListener('click',refreshPublishedAnswers);
-$('showPublishedAnswer').addEventListener('click',()=>{
-  const text=$('publishedAnswerText'); text.hidden=!text.hidden;
-  $('showPublishedAnswer').textContent=text.hidden?'答えを見る':'答えを隠す';
+$('showPublishedAnswer').addEventListener('click', event => {
+  event.preventDefault();
+  const answerBox = $('publishedAnswerText');
+  answerBox.hidden = !answerBox.hidden;
+  $('showPublishedAnswer').textContent = answerBox.hidden ? '答えを見る' : '答えを隠す';
+  if (!answerBox.hidden) requestAnimationFrame(() => answerBox.scrollIntoView({behavior:'smooth', block:'nearest'}));
 });
 document.querySelectorAll('[data-hint]').forEach(button=>button.addEventListener('click',()=>{const level=Number(button.dataset.hint),problem=problems[problemIndex];hintCounts[level]=(hintCounts[level]||0)+1;$('hintText').textContent=`ヒント ${level+1}：${problem.hints[level]}`;$('hintStatus').textContent=`${level+1}段階目を表示中`;logEvent('hint',{hintLevel:level+1});}));
 $('consultButton').addEventListener('click',()=>{const message=$('consultText').value.trim();if(!message){$('consultText').focus();return;}logEvent('consult',{message});$('consultText').value='';$('animationMessage').textContent='相談を送りました。先生に確認してもらいましょう。';});
