@@ -91,7 +91,6 @@ function showView(view) {
   $('practiceView').hidden = view !== 'practice';
   document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
 }
-$('showPublishedAnswer').addEventListener('click', () => { $('publishedAnswerText').hidden = false; });
 
 function evaluateGate(type, values) {
   if (type === 'NOT') return 1 - values[0];
